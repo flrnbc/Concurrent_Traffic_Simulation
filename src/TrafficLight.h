@@ -6,6 +6,8 @@
 #include <condition_variable>
 #include "TrafficObject.h"
 
+enum TrafficLightPhase { red, green };
+
 // forward declarations to avoid include cycle
 class Vehicle;
 
@@ -19,8 +21,14 @@ template <class T>
 class MessageQueue
 {
 public:
+    void send(T &&msg);
+    T receive();
+
+    std::deque<T> _queue;
 
 private:
+    std::condition_variable _cond;
+    std::mutex _mtx;
 
 };
 
@@ -30,7 +38,6 @@ private:
 // can be either „red“ or „green“. Also, add the private method „void cycleThroughPhases()“.
 // Furthermore, there shall be the private member _currentPhase which can take „red“ or „green“ as its value.
 
-enum TrafficLightPhase { red, green };
 
 class TrafficLight : public TrafficObject
 {
@@ -40,7 +47,8 @@ public:
     ~TrafficLight();
 
     // getters / setters
-    TrafficLightPhase getCurrentPhase() { return _currentPhase; };
+    TrafficLightPhase getCurrentPhase();
+    void setCurrentPhase(TrafficLightPhase newPhase) { _currentPhase = newPhase; }
 
     // typical behaviour methods
     void waitForGreen();
@@ -57,7 +65,7 @@ private:
     std::condition_variable _condition;
     std::mutex _mutex;
     TrafficLightPhase _currentPhase;
-
+    MessageQueue<TrafficLightPhase> _msgQueue;
 };
 
 #endif
