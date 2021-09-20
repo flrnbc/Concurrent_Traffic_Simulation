@@ -29,8 +29,8 @@ void MessageQueue<T>::send(T &&msg)
     // FP.4a : The method send should use the mechanisms std::lock_guard<std::mutex>
     // as well as _condition.notify_one() to add a new message to the queue and afterwards send a notification.
     std::lock_guard<std::mutex> lck(_mtxQueue);
-
-    _queue.push_back(std::move(msg));
+    _queue.clear(); // for better performance
+    _queue.emplace_back(msg);
     _cond.notify_one();
 }
 
@@ -41,6 +41,11 @@ void MessageQueue<T>::send(T &&msg)
 TrafficLight::TrafficLight()
 {
     _currentPhase = TrafficLightPhase::red;
+}
+
+TrafficLight::~TrafficLight()
+{
+    std::cout << "Traffic light destructed." << std::endl;
 }
 
 void TrafficLight::waitForGreen()
@@ -77,21 +82,18 @@ void TrafficLight::cycleThroughPhases()
     // and toggles the current phase of the traffic light between red and green and sends an update method
     // to the message queue using move semantics. The cycle duration should be a random value between 4 and 6 seconds.
     // Also, the while-loop should use std::this_thread::sleep_for to wait 1ms between two cycles.
-  
-  	// for random floats in [4.0, 6.0)
-  	std::random_device rd;
-    std::mt19937 eng(rd());
-    std::uniform_real_distribution<> distribution(4.0, 6.0);
-  
-	// get (first) start time and cycle duration
-    auto start = std::chrono::high_resolution_clock::now();
-  	auto cycleDuration = distribution(eng)*1000; // multiply to get milliseconds
-    
-    while (true) {
-        auto end = std::chrono::high_resolution_clock::now();
-        auto time_span = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-      	
+    // for random floats in [4.0, 6.0)
+    static std::random_device rd;
+    static std::mt19937 eng(rd());
+    static std::uniform_real_distribution<> distribution(4.0, 6.0);
+
+    // get (first) start time and cycle duration
+    auto start = std::chrono::high_resolution_clock::now();
+    auto cycleDuration = distribution(eng)*1000; // multiply to get milliseconds
+    auto time_span = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start);
+
+    while (true) {
         if (time_span.count() - cycleDuration >= 0) {
             if (this->getCurrentPhase() == TrafficLightPhase::red){
                 this->setCurrentPhase(TrafficLightPhase::green);
@@ -99,11 +101,13 @@ void TrafficLight::cycleThroughPhases()
                 this->setCurrentPhase(TrafficLightPhase::red);
             }
             _msgQueue.send(std::move(this->getCurrentPhase()));
-          	// update start time and cycle duration
-          	start = std::chrono::high_resolution_clock::now();
-          	cycleDuration = distribution(eng)*1000;
-          	// sleep 
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            // update start time and cycle duration
+            start = std::chrono::high_resolution_clock::now();
+            cycleDuration = distribution(eng)*1000;
         }
+        // update time span
+        time_span = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start);
+        // sleep each iteration
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }

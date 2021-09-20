@@ -44,7 +44,7 @@ class TrafficLight : public TrafficObject
 public:
     // constructor / desctructor
     TrafficLight();
-    ~TrafficLight() {}
+    ~TrafficLight();
 
     // getters / setters
     TrafficLightPhase getCurrentPhase();
@@ -62,8 +62,9 @@ private:
     // and use it within the infinite loop to push each new TrafficLightPhase into it by calling
     // send in conjunction with move semantics.
 
-    std::condition_variable _condition;
-    std::mutex _mtxTrafficLight; // needed at all?
+    // two following vars are provided in the starter code but are not needed
+    //std::condition_variable _condition;
+    //std::mutex _mtxTrafficLight;
     TrafficLightPhase _currentPhase;
     MessageQueue<TrafficLightPhase> _msgQueue;
 };
